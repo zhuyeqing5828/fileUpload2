@@ -1,4 +1,4 @@
-package com.zx.fileupload;
+package com.zx.fileupload.exception;
 /**
  * 文件上传工具抛出的运行时异常
  * @author acer

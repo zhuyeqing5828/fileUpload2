@@ -2,25 +2,28 @@ package com.zx.fileupload;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.zx.fileupload.exception.FileUploadRuntimeException;
 import com.zx.fileupload.utils.StringUtil;
+import com.zx.fileupload.vo.FileConfig;
 
 
 /**
  * 文件上传工具
  * 支持大文件上传,断点续传
- * 版本 0.01
+ * 版本 0.02
  * @author acer
  *
  */
@@ -29,9 +32,10 @@ public class FileUpload {
 	static final String UPLOAD_TRANSMIT="1";
 	
 	final FileUploadProp uploadprop;
-
+	final Set<FileConfig> fileConfigMap;
 	public FileUpload(FileUploadProp uploadProp) {
 		this.uploadprop=uploadProp;
+		this.fileConfigMap=new HashSet<FileConfig>();
 	}
 	
 	public void getUploadFile(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException{
@@ -74,13 +78,14 @@ public class FileUpload {
 			return "{code:-1,value:'file has exist'}";
 		File tempFile=new File(generateFullPath(localName)+".tmp");
 		File cfgFile=new File(generateFullPath(localName+".cfg"));
-		if(!tempFile.exists())
-			tempFile.createNewFile();
+		if(!tempFile.exists()){
+			RandomAccessFile randomAccessFile=new RandomAccessFile(tempFile, "rw");
+			randomAccessFile.setLength(Long.valueOf(reqFileSize));
+			randomAccessFile.close();
+		}
 		if(!cfgFile.exists()){
 			cfgFile.createNewFile();
-			FileWriter fileWriter=new FileWriter(tempFile);
-			fileWriter.write("");
-			fileWriter.close();
+			
 		}
 		Properties properties=new Properties();
 		properties.load(new FileInputStream(cfgFile));
@@ -118,4 +123,63 @@ public class FileUpload {
 			return "{code:200,value:'need more data'}";
 		}
 	}
+}
+
+
+
+class Uploader{
+	FileConfig fileConfig;
+
+	public FileConfig getFileConfig() {
+		return fileConfig;
+	}
+
+	public void setFileConfig(FileConfig fileConfig) {
+		this.fileConfig = fileConfig;
+	}
+	void init(){
+		
+	}
+	/**
+	 * 当对象被销毁时调用该方法
+	 */
+	void destroy(){
+		
+	}
+	/**
+	 * 获得传输数据
+	 * @param req
+	 * @return 下一个传输块的JSON字符串
+	 */
+	String doUploadFileTransport(HttpServletRequest req){
+		return null;
+		
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((fileConfig == null) ? 0 : fileConfig.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Uploader other = (Uploader) obj;
+		if (fileConfig == null) {
+			if (other.fileConfig != null)
+				return false;
+		} else if (!fileConfig.equals(other.fileConfig))
+			return false;
+		return true;
+	}
+	
 }
