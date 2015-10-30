@@ -18,14 +18,8 @@ public class UploadServlet extends HttpServlet{
 			
 			@Override
 			public int onSuccess(String realFileName) {
-				System.out.println(realFileName+" upload success");
+				System.out.println(realFileName+"upload finished");
 				return 0;
-			}
-			
-			@Override
-			public String getSavePath() {
-				
-				return "D:/tmp";
 			}
 			
 			@Override
@@ -33,7 +27,7 @@ public class UploadServlet extends HttpServlet{
 				
 				return fileName;
 			}
-		});
+		}, "D:\\temp");
 		super.init();
 	}
 

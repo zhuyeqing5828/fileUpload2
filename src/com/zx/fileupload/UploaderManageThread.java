@@ -5,10 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
-
 import com.zx.fileupload.vo.FileConfig;
 /**
  */
@@ -19,6 +16,11 @@ public class UploaderManageThread extends Thread {
 	private boolean continueLoop=true; 
 	
 	
+	public void setContinueLoop(boolean continueLoop) {
+		this.continueLoop = continueLoop;
+	}
+
+
 	public int getCycle() {
 		return cycle;
 	}
@@ -51,27 +53,34 @@ public class UploaderManageThread extends Thread {
 				if(continueLoop)
 					return;
 			}
+		recycleFileConfig();
+			}
+		}
+	}
+
+
+	private void recycleFileConfig() {
 		synchronized (fileConfigMap) {
-					for (String fileConfigKey : fileConfigMap.keySet()) {
-						if (fileConfigMap.get(fileConfigKey).getParts().isEmpty()
-								|| new Date().getTime() > fileConfigMap.get(fileConfigKey).getLastModified()+timeout)
-						{
-							try (ObjectOutputStream out = new ObjectOutputStream(
-									new FileOutputStream(fileConfigMap.get(
-											fileConfigKey).getCfgFile()));
-									) {
-								out.writeObject(fileConfigMap.get(fileConfigKey));
-								out.flush();
+			for (String fileConfigKey : fileConfigMap.keySet()) {
+				if (new Date().getTime() > fileConfigMap.get(fileConfigKey)
+						.getLastModified() + timeout) {
+					FileConfig config = fileConfigMap.get(fileConfigKey);
+					if (config.getParts().isEmpty()) {
+						config.getCfgFile().deleteOnExit();
+					} else {
+						try (ObjectOutputStream out = new ObjectOutputStream(
+								new FileOutputStream(fileConfigMap.get(
+										fileConfigKey).getCfgFile()));) {
+							out.writeObject(fileConfigMap.get(fileConfigKey));
+							out.flush();
 						} catch (FileNotFoundException e) {
 							e.printStackTrace();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-					fileConfigMap.remove(fileConfigKey);
-						}
 					}
+					fileConfigMap.remove(fileConfigKey);
 				}
-
 			}
 		}
 	}

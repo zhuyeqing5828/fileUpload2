@@ -21,7 +21,7 @@ public class FileConfig implements Serializable {
 	File cfgFile;
 	long fileSize;
 	long receivedSize=0;
-	Set<FilePartConfig> parts;
+	Map<Long,FilePartConfig> parts;
 	long lastModified;
 	
 	
@@ -50,10 +50,11 @@ public class FileConfig implements Serializable {
 	public void setFileSize(long fileSize) {
 		this.fileSize = fileSize;
 	}
-	public Set<FilePartConfig> getParts() {
+	
+	public Map<Long, FilePartConfig> getParts() {
 		return parts;
 	}
-	public void setParts(Set<FilePartConfig> parts) {
+	public void setParts(Map<Long, FilePartConfig> parts) {
 		this.parts = parts;
 	}
 	public long getLastModified() {

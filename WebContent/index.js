@@ -1,11 +1,11 @@
 function uploadAndSubmit(){
 	var form = document.forms["demoForm"];
-	
+	this.fileUpload;
 	if (form["file"].files.length > 0)
 	{
 		var file3 = form["file"].files[0];
 		document.getElementById("bytesTotal").innerHTML=file3.size;
-		new fileUpload({
+		this.fileUpload=new fileUpload({
 			url:"/fileUpload/upload",
 			file:file3,
 			sending:function(sendingStatue){
@@ -18,5 +18,5 @@ function uploadAndSubmit(){
 			}
 		});
 	}
-		
+	this.cencel=this.fileUpload.cencel();
 }

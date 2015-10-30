@@ -20,12 +20,12 @@ function fileUpload(jsonObject) {
 	this._statue;
 	this._notCencelFlag=true;
 	this._onStatueChanged;
-	this._urlState=(url.match("=") == true);
+	this._urlState=(this._url.match("=") == true);
 	this.startSend = function() {
 		var xhr = new XMLHttpRequest();
 		xhr.fileUpload = this;
-			xhr.open("GET", this._url + (this._urlStatue?"&":"?")+"type=0&fileName=" + this.file.name
-					+ "&fileSize=" + this.file.Size);
+			xhr.open("GET", this._url + (this._urlStatue?"&":"?")+"type=0&fileName=" + this._file.name
+					+ "&fileSize=" + this._file.size);
 		xhr.send();
 		xhr.onreadystatechange = function() {
 			if (this.readyState == 4 && this.status == 200) {
@@ -37,27 +37,30 @@ function fileUpload(jsonObject) {
 	this.cencel=function(){
 		_notCencelFlag=false;
 	}
-	this._responseSuccess(response)
+	this._responseSuccess=function(response)
 	{
 		if (response != null && response.code == 0) {
 			this.statue = 2;
+			
 			var parts=response.needParts;
 			for ( var i in parts) {
 				var part=parts[i];
 				if(this._notCencelFlag)
 				this._transportData(part);
 			}
-			onProcess(response.fileName,response.TransportStatue);
+			this._sending(response.received);
+			if(this._file.size==response.received)
+				this._sendFinished(200,"success");
 				} else {
-			this._sendFinished(response.code, response.statue);
+			this._sendFinished(response.code, response.value);
 		}
 	}
-	this._transportData(response)
+	this._transportData=function(response)
 	{
 		var xhr = new XMLHttpRequest();
 		xhr.fileUpload=this;
-		xhr.open("GET", this._url + (this._urlStatue?"&":"?")+"type=1&fileName=" + this.file.name
-				+ "&fileSize=" + this.file.Size+"&startIndex="+response.startIndex+"&endIndex="+response.endIndex);
+		xhr.open("POST", this._url + (this._urlStatue?"&":"?")+"type=1&fileName=" + this._file.name
+				+ "&fileSize=" + this._file.size+"&startIndex="+response.startIndex+"&endIndex="+response.endIndex);
 		var reader=new FileReader();
 		reader.readAsArrayBuffer(this._file.slice(response.startIndex,response.endIndex));
 		reader.onload=function(){
@@ -70,4 +73,5 @@ function fileUpload(jsonObject) {
 			};
 		}
 	}
+	this.startSend();
 }
