@@ -10,7 +10,7 @@ public class FilePartConfig implements Serializable {
 	private static final long serialVersionUID = 1L;
 	long startIndex;
 	long endIndex;
-	boolean finished;
+	boolean transport=false;
 	public long getStartIndex() {
 		return startIndex;
 	}
@@ -23,11 +23,20 @@ public class FilePartConfig implements Serializable {
 	public void setEndIndex(long endIndex) {
 		this.endIndex = endIndex;
 	}
-	public boolean isFinished() {
-		return finished;
+	
+	public boolean isTransporting() {
+		return transport;
 	}
-	public void setFinished(boolean finished) {
-		this.finished = finished;
+	public void setTransport(boolean transport) {
+		this.transport = transport;
+	}
+	public FilePartConfig() {
+		super();
+	}
+	public FilePartConfig(long startIndex, long endIndex) {
+		super();
+		this.startIndex = startIndex;
+		this.endIndex = endIndex;
 	}
 	@Override
 	public int hashCode() {

@@ -18,9 +18,5 @@ public interface FileUploadProp {
 	 * @return 文件状态: -1 文件上传失败,1文件部分上传成功,2文件上传完成
 	 */
 	int onSuccess(String realFileName);
-	/**
-	 * 通过此方法获得文件上传后的保存路径
-	 * @return
-	 */
-	String getSavePath();
+	
 }

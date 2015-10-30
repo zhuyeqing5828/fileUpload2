@@ -19,9 +19,11 @@ public class FileConfig implements Serializable {
 	
 	File file;
 	File cfgFile;
-	long  fileSize;
+	long fileSize;
+	long receivedSize=0;
 	Set<FilePartConfig> parts;
 	long lastModified;
+	
 	
 	public File getFile() {
 		return file;
@@ -30,6 +32,12 @@ public class FileConfig implements Serializable {
 		this.file = file;
 	}
 	
+	public long getReceivedSize() {
+		return receivedSize;
+	}
+	public void setReceivedSize(long receivedSize) {
+		this.receivedSize = receivedSize;
+	}
 	public File getCfgFile() {
 		return cfgFile;
 	}
