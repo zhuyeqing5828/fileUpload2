@@ -1,71 +1,45 @@
 package com.zx.fileupload;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import com.zx.fileupload.exception.FileUploadRuntimeException;
-import com.zx.fileupload.vo.FileConfig;
 import com.zx.fileupload.vo.FilePartConfig;
+import com.zx.fileupload.vo.FileUploadObject;
 
 /**
- * 文件上传工具 支持大文件上传,断点续传 版本 0.02
+ * 文件上传工具 支持大文件上传,断点续传 版本 0.60
  * 
  * @author acer
  *
  */
 public class FileUpload {
-	static final String UPLOAD_REQUEST = "0";
-	static final String UPLOAD_TRANSMIT = "1";
-
-	final FileUploadProp uploadprop;
-	final Map<String, FileConfig> fileConfigMap;
-	final String savePath;
-	final int partSize;
-	final int transportPartsPerFile;
+	final Map<String,FileUploadProp> fileUploadPropMap;
+	final Map<String,FileUploadObject> fileUploadObjectMap;
 	final UploaderManageThread uploaderManageThread;
+	
 	/**
-	 * 生成一个文件上传工具对象
-	 * 
-	 * @param uploadProp
-	 *            回调函数对象
-	 * @param savePath
-	 *            文件存储目录
-	 * @param partSize
-	 *            分片上传时分片大小
+	 * constructer Method .Generate a New FuleUploadManagerObject
+	 * @param fileUploadRequestTimeOut		fileUploadobject timeout(second),when a part uploaded then reset time counter
+	 * @param recycleCycle	the cycle of check fileUploadObject timeout (second)
 	 */
-	public FileUpload(FileUploadProp uploadProp, String savePath, int partSize,
-			int maxPartTransportPerFile) {
-		this.uploadprop = uploadProp;
-		this.fileConfigMap = Collections
-				.synchronizedMap(new HashMap<String, FileConfig>());
-		this.savePath = savePath;
-		this.partSize = partSize;
-		this.transportPartsPerFile = maxPartTransportPerFile;
-		uploaderManageThread=new UploaderManageThread(fileConfigMap);
-		init();
-	}
-	/**
-	 * 调用该方法初始化该对象
-	 */
-	public void init(){
+	public FileUpload(long fileUploadRequestTimeOut,int recycleCycle) {
+		this.fileUploadPropMap=new HashMap<String,FileUploadProp>();
+		this.fileUploadObjectMap=new HashMap<String,FileUploadObject>();
+		this.uploaderManageThread=new UploaderManageThread(fileUploadObjectMap,recycleCycle,fileUploadRequestTimeOut);
 		uploaderManageThread.start();
 	}
 	/**
+	 * constructer Method .Generate a New FuleUploadManagerObject with Object time one hour and checking cycle two hours.
+	 */
+	public FileUpload(){
+		this(3600,7200);
+	}
+	/**
 	 * 销毁该对象前调用该方法
+	 * warning DO NOT EXECUTE THIS METHOD EXPECT STOP THE SERVER 
 	 */
 	public void delete(){
 		uploaderManageThread.setContinueLoop(false);
@@ -77,108 +51,25 @@ public class FileUpload {
 		delete();
 		super.finalize();
 	}
-	/**
-	 * 生成一个分片大小为1M的文件上传工具对象
-	 * 
-	 * @param uploadProp
-	 *            回调函数对象
-	 * @param savePath
-	 *            文件存储目录
-	 */
-	public FileUpload(FileUploadProp uploadprop,
-			String savePath) {
-		this(uploadprop, savePath, 1 << 20, 3);
-	}
 
 	/**
-	 * 处理文件上传请求的主方法
-	 * 
-	 * @param req
-	 * @param resp
-	 * @throws ServletException
-	 * @throws IOException
+	 * GenerateTimeUploadPart
+	 * @param fileConfig
 	 */
-	public void getUploadFile(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException, IOException {
-		resp.setContentType("text/json;charset=utf-8");
-		String respString = "";
-		String reqType = req.getParameter("type");
-		if (reqType != null) {
-			switch (reqType) {
-			case UPLOAD_REQUEST:
-				respString = doUploadFileRequest(req);
-				break;
-			case UPLOAD_TRANSMIT:
-				respString = doUploadFileTransmit(req);
-				break;
-			default:
-				respString = doRequestError(req);
-			}
-		} else {
-			respString = doRequestError(req);
-		}
-		try {
-			resp.getWriter().write(respString);
-			resp.getWriter().close();
-		} catch (IOException e) {
-			throw new FileUploadRuntimeException("response writter exception",
-					e);
-		}
-
-	}
-
-	private String doRequestError(HttpServletRequest req) {
-		return null;
-
-	}
-	/**
-	 * 处理上传请求的方法
-	 * @param req
-	 * @return
-	 * @throws IOException
-	 */
-	private String doUploadFileRequest(HttpServletRequest req) throws IOException {
-		String reqFileName = req.getParameter("fileName");
-		String reqFileSize = req.getParameter("fileSize");
-		String localName = uploadprop.getLocalName(reqFileName);
-		FileConfig fileConfig;
-		if (localName == null || localName.equals(""))
-			return "{code:-1,value:'file has exist'}";
-		fileConfig = fileConfigMap.get(localName);
-		if (fileConfig == null) {
-			fileConfig = new FileConfig();
-			fileConfig.setFile(new File(generateFullPath(localName) + ".tmp"));
-			fileConfig
-					.setCfgFile(new File(generateFullPath(localName + ".cfg")));
-			fileConfig.setFileSize(Long.valueOf(reqFileSize));
-			fileConfig.setLastModified(new Date().getTime());
-			fileConfig.setParts(Collections
-					.synchronizedMap(new HashMap<Long,FilePartConfig>()));
-			fileConfigMap.put(localName, fileConfig);
-		}
-		File tmpFile = fileConfig.getFile();
-		File cfgFile = fileConfig.getCfgFile();
-
-		if (!tmpFile.exists()) {
-			RandomAccessFile randomAccessFile = new RandomAccessFile(tmpFile,
-					"rw");
-			randomAccessFile.setLength(Long.valueOf(reqFileSize));
-			randomAccessFile.close();
-		}
-		if (!cfgFile.exists()) {
-			cfgFile.createNewFile();
-		}
+	private void generateUploadPart(FileUploadObject fileConfig) {
 		if (fileConfig.getParts().isEmpty()) {
+			int partSize=fileConfig.getObjectProp().getPartSize();
 			long i = 0;
-			//for (; i < tmpFile.length(); i = i + partSize + 1) {
+			int sequence=0;
 			while(true){
-				if ((i+partSize+1 > tmpFile.length())) {
-					fileConfig.getParts().put(i,
-							new FilePartConfig(i, tmpFile.length()));
+				if ((i+partSize >fileConfig.getFileSize())) {
+					FilePartConfig filePargConfig=new FilePartConfig(i, partSize);
+					fileConfig.getParts().put(sequence,filePargConfig);
 					break;
 				}
-				fileConfig.getParts().put( i,new FilePartConfig(i, i + partSize));
-				i=i+partSize+1;
+				fileConfig.getParts().put( sequence,new FilePartConfig(i,partSize));
+				i=i+partSize;
+				sequence++;
 			}
 		}else{
 			//reset part's transport statue
@@ -186,140 +77,125 @@ public class FileUpload {
 				part.setTransport(false);
 			}
 		}
-		
-		
-		
-		
-		/*
-		 * responseJSON { code:0, fileName: localFileName, received: received
-		 * Data, needParts:[{startIndex:startIndex,endIndex:endIndex},....] }
-		 */
-		StringBuilder returnString = getNeedPartsString(localName, fileConfig,transportPartsPerFile);
+	}
+
+	private String getNeedPartsString(String objectId,int partNum) {
+		FileUploadObject fileObject=fileUploadObjectMap.get(objectId);
+		if(fileObject==null)
+			return UploadConstent.WARN_CENCEL;
+		fileObject.setLastUploaded(new Date().getTime());
+		StringBuilder returnString = new StringBuilder(
+				"{code:0,value:'success',id:'" + objectId + "',needMd5:"
+						+ fileObject.getObjectProp().needMd5Checking()
+						+ ",received:" + fileObject.getReceivedSize());
+		returnString.append(doGetPartsString(objectId,fileObject, partNum)+'}');	
 		return returnString.toString();
 	}
 
-	private StringBuilder getNeedPartsString(String localName,
-			FileConfig fileConfig,int partNum) {
-		fileConfig.setLastModified(new Date().getTime());
-		StringBuilder returnString = new StringBuilder("{code:0,fileName:'" + localName + "',received:"
-				+ fileConfig.getReceivedSize() + ",needParts:[");
-		if (fileConfig.getParts().isEmpty()) {
-			doUploadFinished(localName, fileConfig);
-		}else{
-			doGetParts(fileConfig, partNum, returnString);	
-		}
-		returnString.append("]}");
-		return returnString;
-	}
-	private void doGetParts(FileConfig fileConfig, int partNum,
-			StringBuilder returnString) {
-		Collection<FilePartConfig> parts = fileConfig.getParts().values();
-		synchronized (parts) {
-		int i=0;
-		for (FilePartConfig filePartConfig : parts) {
-			if(i<partNum)
-				i++;
-			else break;
-			if (filePartConfig.isTransporting()) {
-				continue;
+	private String doGetPartsString(String objectId,
+			FileUploadObject fileConfig, int partNum) {
+		StringBuilder returnString = new StringBuilder(",needParts:[");
+		synchronized (fileConfig.getParts()) {
+			Collection<FilePartConfig> parts = fileConfig.getParts().values();
+			if (parts.isEmpty()) {
+				fileConfig.getObjectProp().onFileUploadFinished(objectId,
+						fileConfig);
 			} else {
-				
-				returnString.append("{startIndex:"
-						+ filePartConfig.getStartIndex() + ",endIndex:"
-						+ filePartConfig.getEndIndex() + "},");
-				filePartConfig.setTransport(true);
-				
-			}
-		}
-}
-	}
+				int i = 0;
+				for (FilePartConfig filePartConfig : parts) {
+					if (i < partNum)
+						i++;
+					else
+						break;
+					if (filePartConfig.isTransporting()) {
+						continue;
+					} else {
 
-	private void doUploadFinished(String localName, FileConfig fileConfig) {
-		fileConfig.getFile().renameTo(
-				new File(generateFullPath(localName)));
-		fileConfig.getCfgFile().deleteOnExit();
-		fileConfigMap.remove(localName);
-		uploadprop.onSuccess(localName);
-	}
-	private String generateFullPath(String localname) {
-		return savePath + "/" + localname;
-	}
-
-	public String doUploadFileTransmit(HttpServletRequest req)
-			throws IOException {
-		String localName = req.getParameter("fileName");
-		FileConfig fileConfig;
-		fileConfig = getFileConfig(localName);
-		if(fileConfig==null)
-			return "{code:404,value:inlegal file transmit request}";
-		File tmpFile = fileConfig.getFile();
-		long startIndex=Long.valueOf(req.getParameter("startIndex"));
-		long endIndex=Long.valueOf(req.getParameter("endIndex"));
-		FilePartConfig part=fileConfig.getParts().get(startIndex);
-		if (part != null && part.isTransporting()){
-			 receivePart(req, localName, fileConfig, tmpFile, startIndex,
-					endIndex, part);
-			 return getNeedPartsString(localName, fileConfig,1).toString();
-		}
-		else {
-			return "{code:404,value:'illegal part Transmit request '}";
-		}
-	}
-	private boolean receivePart(HttpServletRequest req, String localName,
-			FileConfig fileConfig, File tmpFile, long startIndex,
-			long endIndex, FilePartConfig part) throws FileNotFoundException,
-			IOException {
-		{
-			RandomAccessFile raf = new RandomAccessFile(tmpFile, "rw");
-			raf.seek(startIndex);
-			InputStream in = req.getInputStream();
-			byte b[] = new byte[partSize];
-			int i;
-			int j = 0;
-			while ((i = in.read(b)) != -1) {
-				j += i;
-				// when transport data fail
-				raf.write(b, 0, i);
-			}
-			raf.close();
-			in.close();
-
-			synchronized (fileConfig) {
-				if (j == endIndex - startIndex) {
-					fileConfig.getParts().remove(startIndex);
-					fileConfig.setReceivedSize(fileConfig.getReceivedSize()
-							+ endIndex - startIndex);
-					// on file finished
-					return true;
-					//checkFinished(localName, fileConfig);
-				} else {
-					part.setTransport(false);
-					return false;
+						returnString.append("{startIndex:"
+								+ filePartConfig.getStartIndex() + ",length:"
+								+ filePartConfig.getLength() + "},");
+						filePartConfig.setTransport(true);
+					}
 				}
+				returnString.deleteCharAt(returnString.length() - 1);
 			}
 		}
+		returnString.append(']');
+		return returnString.toString();
 	}
 	
-	private FileConfig getFileConfig(String localName) throws IOException,
-			FileNotFoundException {
-		FileConfig fileConfig;
-		synchronized (fileConfigMap) {
-			fileConfig = fileConfigMap.get(localName);
-			if (fileConfig == null) {
-				File cfgFile=new File(generateFullPath(localName));
-				if (!cfgFile.exists()) {
-					return null;
-				}
-				
-				try (ObjectInputStream ois=new ObjectInputStream(new FileInputStream(cfgFile));){
-					fileConfig=(FileConfig)ois.readObject();
-				} catch (ClassNotFoundException e) {
-					throw new FileUploadRuntimeException(e);
-				}
-				fileConfig.setLastModified(new Date().getTime());
-				fileConfigMap.put(localName, fileConfig);
-			}
+	
+	/**
+	 * receive a new fileUploadObject
+	 * @param fileUploadObject
+	 * @return
+	 */
+	public String addFileUploadRequest(String fileName ,String bucketName,long length,Map<String,String[]> parameperMap) {
+		
+		FileUploadProp bucketProp=fileUploadPropMap.get(bucketName);
+		String propId= bucketProp.getPropid(fileName,length,parameperMap);
+		if(propId==null)
+			return UploadConstent.WARN_REFUSED_SEERVER;
+		if(propId.equals(""))
+			return UploadConstent.UPLOAD_FINISHED;
+		//get fileUploadObject
+		FileUploadObject fileUploadObject=fileUploadObjectMap.get(propId);
+		if(fileUploadObject==null){
+			fileUploadObject=new FileUploadObject(bucketName,fileName,length,bucketProp);
+			fileUploadObjectMap.put(propId, fileUploadObject);
+			generateUploadPart(fileUploadObject);
 		}
-		return fileConfig;
+		//return needParts
+		return getNeedPartsString(propId, bucketProp.getMaxTransportThreadNum());
+		}
+	/**
+	 * transmit upload Part and operate 
+	 * @param ObjectId
+	 * @param sequence
+	 * @param in
+	 * @param MD5
+	 * @return
+	 */
+	public String transmitUploadPart(String ObjectId,int sequence,InputStream in){
+		FileUploadObject uploadObject=fileUploadObjectMap.get(ObjectId);
+		if(uploadObject==null)
+			return UploadConstent.ERROR_CLIENT_NOREQUEST;
+		Map<Integer, FilePartConfig> filePartMap=uploadObject.getParts();
+		FilePartConfig partConfig=filePartMap.get(sequence);
+		if(partConfig==null)
+			return UploadConstent.ERRIR_CLIENT_NOPART;
+		FilePartObject partObject=new FilePartObject(ObjectId, sequence, partConfig.getStartIndex(), partConfig.getLength(), in);
+		if(uploadObject.getObjectProp().onFilePartUpload(partObject)){
+			synchronized (uploadObject) {
+				uploadObject.setReceivedSize(uploadObject.getReceivedSize()+partConfig.getLength());	
+			}
+			
+			filePartMap.remove(ObjectId);
+		}else{
+			filePartMap.get(ObjectId).setTransport(false);
+		}
+		
+		return getNeedPartsString(ObjectId, 1);
+	}
+	
+	public String cencelUpload(String objectId){
+		 FileUploadObject uploadObject= fileUploadObjectMap.remove(objectId);
+		 if(uploadObject!=null)
+			 uploadObject.getObjectProp().onFileUploadCenceled(objectId,uploadObject);
+		 else return UploadConstent.ERROR_CLIENT_NOREQUEST;
+		 return UploadConstent.REQUEST_SUCCESS;
+	}
+	/**
+	 * setMD5ToUploadFile
+	 * @param id	upload request id	
+	 * @param md5	file md5 check
+	 * @return
+	 */
+	public String setMD5(String id, String md5) {
+		 FileUploadObject uploadObject= fileUploadObjectMap.get(id);
+		 if(uploadObject!=null)
+			 uploadObject.setMd5Checking(md5);
+		 else return UploadConstent.ERROR_CLIENT_NOREQUEST;
+		 return UploadConstent.REQUEST_SUCCESS;
 	}
 }

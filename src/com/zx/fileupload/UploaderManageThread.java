@@ -1,16 +1,16 @@
 package com.zx.fileupload;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.Date;
 import java.util.Map;
-import com.zx.fileupload.vo.FileConfig;
+
+import com.zx.fileupload.vo.FileUploadObject;
 /**
+ * fileUpload Cache map recycle thread
+ * @author zhuyeqing
+ *
  */
 public class UploaderManageThread extends Thread {
-	final Map<String,FileConfig> fileConfigMap;
+	final Map<String, FileUploadObject> fileConfigMap;
 	final int cycle;
 	final long timeout;
 	private boolean continueLoop=true; 
@@ -26,7 +26,7 @@ public class UploaderManageThread extends Thread {
 	}
 
 
-	public UploaderManageThread(Map<String,FileConfig> fileConfigMap) {
+	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap) {
 		this(fileConfigMap,1800,900);
 	}
 	/**
@@ -34,7 +34,7 @@ public class UploaderManageThread extends Thread {
 	 * @param fileConfigMap  文件上传管理map
 	 * @param cycle	循环周期
 	 */
-	public UploaderManageThread(Map<String,FileConfig> fileConfigMap, int cycle,long timeout) {
+	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap, int cycle,long timeout) {
 		super();
 		this.fileConfigMap = fileConfigMap;
 		this.cycle = cycle*1000;
@@ -63,22 +63,8 @@ public class UploaderManageThread extends Thread {
 		synchronized (fileConfigMap) {
 			for (String fileConfigKey : fileConfigMap.keySet()) {
 				if (new Date().getTime() > fileConfigMap.get(fileConfigKey)
-						.getLastModified() + timeout) {
-					FileConfig config = fileConfigMap.get(fileConfigKey);
-					if (config.getParts().isEmpty()) {
-						config.getCfgFile().deleteOnExit();
-					} else {
-						try (ObjectOutputStream out = new ObjectOutputStream(
-								new FileOutputStream(fileConfigMap.get(
-										fileConfigKey).getCfgFile()));) {
-							out.writeObject(fileConfigMap.get(fileConfigKey));
-							out.flush();
-						} catch (FileNotFoundException e) {
-							e.printStackTrace();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
+						.getLastUploaded() + timeout) {
+					FileUploadObject config = fileConfigMap.get(fileConfigKey);
 					fileConfigMap.remove(fileConfigKey);
 				}
 			}

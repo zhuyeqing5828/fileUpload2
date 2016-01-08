@@ -1,22 +1,57 @@
 package com.zx.fileupload;
+
+import java.util.Map;
+
+import com.zx.fileupload.vo.FileUploadObject;
+
 /**
  * 文件上传工具回调函数
  * @author acer
  *
  */
 public interface FileUploadProp {
-	
 	/**
-	 * 通过上传的文件名获得服务器存储的文件名
-	 * @param fileName 上传的文件名
-	 * @return 服务器存储的文件名
+	 * 设置每个文件上传配置的唯一标识
+	 * @return
 	 */
-	String getLocalName(String fileName);
+	String getPropid(String fileName,long length,Map<String, String[]> parameterMap);
 	/**
-	 * 当文件上传完毕后调用实现此接口的方法
-	 * @param realFileName	上传完毕的服务器存储的文件名
-	 * @return 文件状态: -1 文件上传失败,1文件部分上传成功,2文件上传完成
+	 * 当收到一个文件上传请求的操作
+	 * @param prop
+	 * @return 该文件上传请求的id(唯一,在整个fileUpload对象) 如果为null 则拒绝该上传请求
 	 */
-	int onSuccess(String realFileName);
-	
+	String onFileUploadRequest(FileUploadRequestProp prop);
+
+	/**
+	 * 设置分片大小
+	 * @return
+	 */
+	int getPartSize();
+	/**
+	 * 设置最大同时上传的分片数量
+	 * @return
+	 */
+	int getMaxTransportThreadNum();
+	/**
+	 * 当收到一个文件块后的操作
+	 * @param filePartObject
+	 * @return true为文件块生效,false为需要重传文件块
+	 */
+	boolean onFilePartUpload(FilePartObject filePartObject);
+	/**
+	 * 当文件上传完毕后操作
+	 * @param prop
+	 */
+	void onFileUploadFinished(String fileId,FileUploadObject uploadObject);
+	/**
+	 * 当客户端文件上传终止后的操作
+	 * @param uploadObject 
+	 * @param prop
+	 */
+	void onFileUploadCenceled(String fileId, FileUploadObject uploadObject);
+	/**
+	 * 是否需要Md5校验
+	 * @return
+	 */
+	boolean needMd5Checking();
 }
