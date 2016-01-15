@@ -10,7 +10,7 @@ import java.util.Map;
 public class FileUploadRequestProp {
 	String filename;
 	long fuleSize;
-	FileUploadProp requestProp;
+	FileUploadBucketProp requestProp;
 	Map<String,String> parameperMap;
 	String Md5Code;
 	public String getFilename() {
@@ -25,10 +25,10 @@ public class FileUploadRequestProp {
 	public void setFuleSize(long fuleSize) {
 		this.fuleSize = fuleSize;
 	}
-	public FileUploadProp getRequestProp() {
+	public FileUploadBucketProp getRequestProp() {
 		return requestProp;
 	}
-	public void setRequestProp(FileUploadProp requestProp) {
+	public void setRequestProp(FileUploadBucketProp requestProp) {
 		this.requestProp = requestProp;
 	}
 	public Map<String, String> getParameperMap() {
@@ -44,7 +44,7 @@ public class FileUploadRequestProp {
 		Md5Code = md5Code;
 	}
 	public FileUploadRequestProp(String filename, long fuleSize,
-			FileUploadProp requestProp, Map<String, String> parameperMap,
+			FileUploadBucketProp requestProp, Map<String, String> parameperMap,
 			String md5Code) {
 		super();
 		this.filename = filename;

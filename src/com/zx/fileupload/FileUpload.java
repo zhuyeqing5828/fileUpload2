@@ -16,114 +16,46 @@ import com.zx.fileupload.vo.FileUploadObject;
  *
  */
 public class FileUpload {
-	final Map<String,FileUploadProp> fileUploadPropMap;
 	final Map<String,FileUploadObject> fileUploadObjectMap;
-	final UploaderManageThread uploaderManageThread;
+	private UploaderManageThread uploaderManageThread;
+	public boolean  isRunning; 
+	final ResourceClass fileUploadProp;
+
+	public void setRecycleCycle(int recycleCycle) {
+		if(!isRunning)
+			this.fileUploadProp.setRecycleCycle(recycleCycle);
+	}
 	
+	public void setFileUploadRequestTimeOut(int fileUploadRequestTimeOut) {
+		if(isRunning)
+			this.fileUploadProp.setFileUploadRequestTimeOut(fileUploadRequestTimeOut);
+	}
 	/**
 	 * constructer Method .Generate a New FuleUploadManagerObject
 	 * @param fileUploadRequestTimeOut		fileUploadobject timeout(second),when a part uploaded then reset time counter
 	 * @param recycleCycle	the cycle of check fileUploadObject timeout (second)
 	 */
-	public FileUpload(long fileUploadRequestTimeOut,int recycleCycle) {
-		this.fileUploadPropMap=new HashMap<String,FileUploadProp>();
+	public FileUpload(ResourceClass resourclass) {
 		this.fileUploadObjectMap=new HashMap<String,FileUploadObject>();
-		this.uploaderManageThread=new UploaderManageThread(fileUploadObjectMap,recycleCycle,fileUploadRequestTimeOut);
-		uploaderManageThread.start();
-	}
-	/**
-	 * constructer Method .Generate a New FuleUploadManagerObject with Object time one hour and checking cycle two hours.
-	 */
-	public FileUpload(){
-		this(3600,7200);
-	}
-	/**
-	 * 销毁该对象前调用该方法
-	 * warning DO NOT EXECUTE THIS METHOD EXPECT STOP THE SERVER 
-	 */
-	public void delete(){
-		uploaderManageThread.setContinueLoop(false);
-		uploaderManageThread.interrupt();
+		this.isRunning=false;
+		this.fileUploadProp=resourclass;
+	
 	}
 	
 	@Override
 	protected void finalize() throws Throwable {
-		delete();
+		stop();
 		super.finalize();
 	}
-
 	/**
-	 * GenerateTimeUploadPart
-	 * @param fileConfig
+	 * 添加一组新的配置信息(bucket)
+	 * @param bucketName	名称
+	 * @param prop	信息对象
+	 * @return		返回原有的配置信息对象,如果原有对象为null,则返回null
 	 */
-	private void generateUploadPart(FileUploadObject fileConfig) {
-		if (fileConfig.getParts().isEmpty()) {
-			int partSize=fileConfig.getObjectProp().getPartSize();
-			long i = 0;
-			int sequence=0;
-			while(true){
-				if ((i+partSize >fileConfig.getFileSize())) {
-					FilePartConfig filePargConfig=new FilePartConfig(i, partSize);
-					fileConfig.getParts().put(sequence,filePargConfig);
-					break;
-				}
-				fileConfig.getParts().put( sequence,new FilePartConfig(i,partSize));
-				i=i+partSize;
-				sequence++;
-			}
-		}else{
-			//reset part's transport statue
-			for (FilePartConfig part : fileConfig.getParts().values()) {
-				part.setTransport(false);
-			}
-		}
+	public FileUploadBucketProp addUploadBucket(String bucketName,FileUploadBucketProp prop){
+		return fileUploadProp.getFileUploadPropMap().put(bucketName, prop);
 	}
-
-	private String getNeedPartsString(String objectId,int partNum) {
-		FileUploadObject fileObject=fileUploadObjectMap.get(objectId);
-		if(fileObject==null)
-			return UploadConstent.WARN_CENCEL;
-		fileObject.setLastUploaded(new Date().getTime());
-		StringBuilder returnString = new StringBuilder(
-				"{code:0,value:'success',id:'" + objectId + "',needMd5:"
-						+ fileObject.getObjectProp().needMd5Checking()
-						+ ",received:" + fileObject.getReceivedSize());
-		returnString.append(doGetPartsString(objectId,fileObject, partNum)+'}');	
-		return returnString.toString();
-	}
-
-	private String doGetPartsString(String objectId,
-			FileUploadObject fileConfig, int partNum) {
-		StringBuilder returnString = new StringBuilder(",needParts:[");
-		synchronized (fileConfig.getParts()) {
-			Collection<FilePartConfig> parts = fileConfig.getParts().values();
-			if (parts.isEmpty()) {
-				fileConfig.getObjectProp().onFileUploadFinished(objectId,
-						fileConfig);
-			} else {
-				int i = 0;
-				for (FilePartConfig filePartConfig : parts) {
-					if (i < partNum)
-						i++;
-					else
-						break;
-					if (filePartConfig.isTransporting()) {
-						continue;
-					} else {
-
-						returnString.append("{startIndex:"
-								+ filePartConfig.getStartIndex() + ",length:"
-								+ filePartConfig.getLength() + "},");
-						filePartConfig.setTransport(true);
-					}
-				}
-				returnString.deleteCharAt(returnString.length() - 1);
-			}
-		}
-		returnString.append(']');
-		return returnString.toString();
-	}
-	
 	
 	/**
 	 * receive a new fileUploadObject
@@ -132,7 +64,7 @@ public class FileUpload {
 	 */
 	public String addFileUploadRequest(String fileName ,String bucketName,long length,Map<String,String[]> parameperMap) {
 		
-		FileUploadProp bucketProp=fileUploadPropMap.get(bucketName);
+		FileUploadBucketProp bucketProp=fileUploadProp.getFileUploadPropMap().get(bucketName);
 		String propId= bucketProp.getPropid(fileName,length,parameperMap);
 		if(propId==null)
 			return UploadConstent.WARN_REFUSED_SEERVER;
@@ -198,4 +130,113 @@ public class FileUpload {
 		 else return UploadConstent.ERROR_CLIENT_NOREQUEST;
 		 return UploadConstent.REQUEST_SUCCESS;
 	}
+	/**
+	 * stopFileUpload
+	 */
+	public void stop() {
+		if(isRunning){
+		uploaderManageThread.setContinueLoop(false);
+		uploaderManageThread.interrupt();
+		isRunning=false;
+		onStop();
+		}
+	}
+	/**
+	 * start FileUpload
+	 */
+	public void start() {
+		if(isRunning)
+			return;
+		onStart();
+		this.uploaderManageThread=new UploaderManageThread(fileUploadObjectMap,fileUploadProp.getRecycleCycle(),fileUploadProp.getFileUploadRequestTimeOut());
+		uploaderManageThread.start();
+		isRunning=true;
+	}
+	
+	/**
+	 * GenerateTimeUploadPart
+	 * @param fileConfig
+	 */
+	private void generateUploadPart(FileUploadObject fileConfig) {
+		if (fileConfig.getParts().isEmpty()) {
+			int partSize=fileConfig.getObjectProp().getPartSize();
+			long i = 0;
+			int sequence=0;
+			while(true){
+				if ((i+partSize >fileConfig.getFileSize())) {
+					FilePartConfig filePargConfig=new FilePartConfig(i, partSize);
+					fileConfig.getParts().put(sequence,filePargConfig);
+					break;
+				}
+				fileConfig.getParts().put( sequence,new FilePartConfig(i,partSize));
+				i=i+partSize;
+				sequence++;
+			}
+		}else{
+			//reset part's transport statue
+			for (FilePartConfig part : fileConfig.getParts().values()) {
+				part.setTransport(false);
+			}
+		}
+	}
+
+	private String getNeedPartsString(String objectId,int partNum) {
+		FileUploadObject fileObject=fileUploadObjectMap.get(objectId);
+		if(fileObject==null)
+			return UploadConstent.WARN_CENCEL;
+		fileObject.setLastUploaded(new Date().getTime());
+		StringBuilder returnString = new StringBuilder(
+				"{code:0,value:'success',id:'" + objectId + "',needMd5:"
+						+ fileObject.getObjectProp().needMd5Checking()
+						+ ",received:" + fileObject.getReceivedSize());
+		returnString.append(doGetPartsString(objectId,fileObject, partNum)+'}');	
+		return returnString.toString();
+	}
+
+	private String doGetPartsString(String objectId,
+			FileUploadObject fileConfig, int partNum) {
+		StringBuilder returnString = new StringBuilder(",needParts:[");
+		synchronized (fileConfig.getParts()) {
+			Collection<Integer> partSeqs = fileConfig.getParts().keySet();
+			if (partSeqs.isEmpty()) {
+				fileConfig.getObjectProp().onFileUploadFinished(objectId,
+						fileConfig);
+			} else {
+				int i = 0;
+				for (int partSeq : partSeqs) {
+					FilePartConfig filePartConfig=fileConfig.getParts().get(partSeq);
+					
+					if (filePartConfig.isTransporting()) {
+						continue;
+					} else if (i >= partNum)
+							break;
+						else {
+						returnString.append("{startIndex:"
+								+ filePartConfig.getStartIndex() + ",length:"
+								+ filePartConfig.getLength() + "partSeq:"+partSeq+"},");
+						filePartConfig.setTransport(true);
+						i++;
+					}
+				}
+				returnString.deleteCharAt(returnString.length() - 1);
+			}
+		}
+		returnString.append(']');
+		return returnString.toString();
+	}
+	
+	
+	
+	private void onStart() {
+		for (FileUploadProp fileUploadProp2 : fileUploadProp.getProps()) {
+			fileUploadProp2.beforeStarted(this);
+		}
+		
+	}
+	private void onStop(){
+		for (FileUploadProp fileUploadProp2 : fileUploadProp.getProps()) {
+			fileUploadProp2.afterStopped(this);
+		}
+	}
+
 }

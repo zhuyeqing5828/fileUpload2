@@ -4,14 +4,12 @@ import java.util.Map;
 
 import com.zx.fileupload.vo.FileUploadObject;
 
-public abstract class CommonFileUploadProp implements FileUploadProp{
+public abstract class CommonFileUploadProp implements FileUploadBucketProp{
 
 	@Override
 	public abstract String getPropid(String fileName, long length,
 			Map<String, String[]> parameterMap);
 
-	@Override
-	public abstract String onFileUploadRequest(FileUploadRequestProp prop) ;
 /**
  * default  partSize 1M
  */

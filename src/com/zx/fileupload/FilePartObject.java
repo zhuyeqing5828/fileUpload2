@@ -20,7 +20,7 @@ public class FilePartObject {
 	public int getLength() {
 		return length;
 	}
-	public InputStream getIn() {
+	public InputStream getInputStream() {
 		return in;
 	}
 	public FilePartObject(String fileId, int sequence, long startIndex,

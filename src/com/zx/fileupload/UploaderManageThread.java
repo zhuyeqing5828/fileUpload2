@@ -12,7 +12,7 @@ import com.zx.fileupload.vo.FileUploadObject;
 public class UploaderManageThread extends Thread {
 	final Map<String, FileUploadObject> fileConfigMap;
 	final int cycle;
-	final long timeout;
+	final int timeout;
 	private boolean continueLoop=true; 
 	
 	
@@ -24,6 +24,11 @@ public class UploaderManageThread extends Thread {
 	public int getCycle() {
 		return cycle;
 	}
+	
+
+	public int getTimeout() {
+		return timeout;
+	}
 
 
 	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap) {
@@ -34,7 +39,7 @@ public class UploaderManageThread extends Thread {
 	 * @param fileConfigMap  文件上传管理map
 	 * @param cycle	循环周期
 	 */
-	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap, int cycle,long timeout) {
+	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap, int cycle,int timeout) {
 		super();
 		this.fileConfigMap = fileConfigMap;
 		this.cycle = cycle*1000;

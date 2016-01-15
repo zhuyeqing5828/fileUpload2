@@ -30,7 +30,7 @@ function fileUpload(bucketName,jsonObject){
 	this.addUploadMission=function(file,parameterData){
 		$.ajax(_uploadUrl,{
 			cache:false,
-			headers:{type:"New",bucketName:this._bucketName,fileName:file.name,length:file.length},
+			headers:{type:"New",bucketName:this._bucketName,fileName:file.name,fileLength:file.size},
 			data:parameterData,
 			type:"POST",
 			success:function(data){
@@ -46,11 +46,13 @@ function fileUpload(bucketName,jsonObject){
 						
 						//md5 Code
 						if(data.needMd5){
-							var md5Value=md5Check(file);
-							$.ajax(_uploadUrl,{
-								cache:false,
-								headers:{type:"md5Code",fileId:fileId,MD5:md5Value},
+							var md5Value=MD5Check(file,function(md5Value){
+								$.ajax(_uploadUrl,{
+									cache:false,
+									headers:{type:"md5Code",fileId:fileId,MD5:md5Value},
+								});
 							});
+							
 						}
 					}
 				}
@@ -62,10 +64,10 @@ function fileUpload(bucketName,jsonObject){
 	
 	};
 	
-	this._startTransmit=function(id,file,sequence,startIndex,length){
+	this._startTransmit=function(id,file,sequence,startIndex,fileLength){
 		if(!data.code){
 			var reader=new FileReader();
-			reader.readAsArrayBuffer(this._file.slice(startIndex,startIndex+length));
+			reader.readAsArrayBuffer(this._file.slice(startIndex,startIndex+fileLength));
 			reader.onload=function(){
 				var result=reader.result;
 			}

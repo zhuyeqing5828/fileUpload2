@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.zx.fileupload.FileUploadProp;
+import com.zx.fileupload.FileUploadBucketProp;
 /**
  * 文件上传服务器存储的配置文件
  * @author acer
@@ -23,7 +23,7 @@ public class FileUploadObject implements Serializable {
 	long receivedSize=0;
 	long lastUploaded;
 	String md5Checking;
-	FileUploadProp ObjectProp;
+	FileUploadBucketProp ObjectProp;
 	Map<Integer,FilePartConfig> parts=new HashMap<Integer, FilePartConfig>();
 	public String getBucketName() {
 		return bucketName;
@@ -47,7 +47,7 @@ public class FileUploadObject implements Serializable {
 		return parts;
 	}
 	
-	public FileUploadProp getObjectProp() {
+	public FileUploadBucketProp getObjectProp() {
 		return ObjectProp;
 	}
 	
@@ -68,7 +68,7 @@ public class FileUploadObject implements Serializable {
 	}
 
 	public FileUploadObject(String bucketName, String fileName, long fileSize,
-			FileUploadProp objectProp) {
+			FileUploadBucketProp objectProp) {
 		super();
 		this.bucketName = bucketName;
 		this.fileName = fileName;
