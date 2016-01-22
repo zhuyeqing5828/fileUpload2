@@ -1,11 +1,11 @@
 var fileId;
-var fileUploadTest=new fileUpload("test",{
+var fileUploadTest=new fileUpload("testBucket",{
 	onLoaded:function(fileId,file){
 		fileId=fileId;
 		console.log(fileId +"loaded "+file.name);
 	},
 
-	onProcess:function(fileId,process){
+	onSending:function(fileId,process){
 		document.getElementById("bytesRead").innerHTML=process;
 	},
 	

@@ -1,6 +1,8 @@
-package com.zx.fileupload;
+package com.zx.fileupload.vo;
 
 import java.util.Map;
+
+import com.zx.fileupload.FileUploadBucketProp;
 
 /**
  * 文件上传请求信息

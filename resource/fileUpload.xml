@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fileUpload>
+	<globalConfig>
+		<recycleCycle>300</recycleCycle>
+		<timeOut>150</timeOut>
+	</globalConfig>
+	<listener>
+		<listenerName>testListener</listenerName>
+		<listenerClass>test.TestListener</listenerClass>
+	</listener>
+	<bucket>
+		<bucketName>testBucket</bucketName>
+		<bucketClass>test.TestBucket</bucketClass>
+	</bucket>
+</fileUpload>

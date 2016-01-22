@@ -1,6 +1,5 @@
 package com.zx.fileupload.vo;
 
-import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,9 +21,10 @@ public class FileUploadObject implements Serializable {
 	long fileSize;
 	long receivedSize=0;
 	long lastUploaded;
+	int sequence=0;
 	String md5Checking;
 	FileUploadBucketProp ObjectProp;
-	Map<Integer,FilePartConfig> parts=new HashMap<Integer, FilePartConfig>();
+	HashMap<Integer,FilePartConfig> parts=new HashMap<Integer, FilePartConfig>();
 	public String getBucketName() {
 		return bucketName;
 	}
@@ -43,7 +43,10 @@ public class FileUploadObject implements Serializable {
 	public void setReceivedSize(long receivedSize) {
 		this.receivedSize = receivedSize;
 	}
-	public Map<Integer, FilePartConfig> getParts() {
+	public synchronized void addReceivedSize(long receiveSize){
+		this.receivedSize+=receiveSize;
+	}
+	public HashMap<Integer, FilePartConfig> getParts() {
 		return parts;
 	}
 	
@@ -66,6 +69,8 @@ public class FileUploadObject implements Serializable {
 	public void setMd5Checking(String md5Checking) {
 		this.md5Checking = md5Checking;
 	}
+	
+	
 
 	public FileUploadObject(String bucketName, String fileName, long fileSize,
 			FileUploadBucketProp objectProp) {
@@ -74,6 +79,14 @@ public class FileUploadObject implements Serializable {
 		this.fileName = fileName;
 		this.fileSize = fileSize;
 		ObjectProp = objectProp;
+	}
+	
+	public void setSequence(int sequence) {
+		this.sequence = sequence;
+	}
+
+	public int getSequence() {
+		return sequence;
 	}
 	
 	

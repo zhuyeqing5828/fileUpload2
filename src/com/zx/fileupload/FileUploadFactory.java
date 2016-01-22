@@ -1,4 +1,7 @@
 package com.zx.fileupload;
+
+import com.zx.fileupload.vo.ResourceClass;
+
 /**
  * file upload factory developer can override this method to implement more function
  * @author zhuyeqing
@@ -14,12 +17,10 @@ public class FileUploadFactory {
 		return null;
 	}
 	public static final FileUpload generateFileUpload(ResourceClass resource){
-		 synchronized (fileUpload) {
-			 if(fileUpload!=null&&fileUpload.isRunning)
-				 fileUpload.stop();
-			 fileUpload=new FileUpload(resource);
-			 return fileUpload;
-		}
+		 if(fileUpload!=null&&fileUpload.isRunning)
+			 fileUpload.stop();
+		 fileUpload=new FileUpload(resource);
+		 return fileUpload;
 	}
 	
 }

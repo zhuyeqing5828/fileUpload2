@@ -2,6 +2,7 @@ package com.zx.fileupload;
 
 import java.util.Map;
 
+import com.zx.fileupload.vo.FilePartObject;
 import com.zx.fileupload.vo.FileUploadObject;
 
 /**
@@ -26,6 +27,10 @@ public interface FileUploadBucketProp {
 	 * @return
 	 */
 	int getMaxTransportThreadNum();
+	/**
+	 * 设置传输请求超时时间  单位 秒
+	 */
+	int geTransportPartTimeOut();
 	/**
 	 * 当收到一个文件块后的操作
 	 * @param filePartObject

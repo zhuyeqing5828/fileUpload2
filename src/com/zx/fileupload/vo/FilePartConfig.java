@@ -10,25 +10,32 @@ public class FilePartConfig implements Serializable {
 	private static final long serialVersionUID = 1L;
 	long startIndex;
 	int length;
-	boolean transport;
-	
+	TransportStatue transportStatue;
+	long transportTime;
 	public long getStartIndex() {
 		return startIndex;
 	}
 		public int getLength() {
 		return length;
 	}
-	public boolean isTransporting() {
-		return transport;
-	}
-	public void setTransport(boolean transport) {
-		this.transport = transport;
-	}
+		
 	
+	public TransportStatue getTransportStatue() {
+			return transportStatue;
+		}
+	public void setTransportStatue(TransportStatue transportStatue) {
+			this.transportStatue = transportStatue;
+		}
+	public long getTransportTime() {
+		return transportTime;
+	}
+	public void setTransportTime(long transportTime) {
+		this.transportTime = transportTime;
+	}
 	public FilePartConfig(long startIndex, int length) {
 		super();
 		this.startIndex = startIndex;
 		this.length = length;
-		this.transport=false;
+		this.transportStatue=TransportStatue.INLINE;
 	}
 }

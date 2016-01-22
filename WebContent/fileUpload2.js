@@ -28,71 +28,79 @@ function fileUpload(bucketName,jsonObject){
 	};
 	
 	this.addUploadMission=function(file,parameterData){
-		$.ajax(_uploadUrl,{
+		$.ajax(_uploadUrl+"?fileName="+file.name,{
 			cache:false,
-			headers:{type:"New",bucketName:this._bucketName,fileName:file.name,fileLength:file.size},
+			headers:{type:"New",bucketName:this._bucketName,fileLength:file.size},
 			data:parameterData,
 			type:"POST",
+			upload:this,
 			success:function(data){
-				if(this._onLoaded){
-					if(!data.code){
-						this._onLoaded(data.fileId,file);
-						this._onProcess(data.fileId,data.received);
-						var needParts=data.needParts;
-						for ( var needPartSeq in needParts) {
-							var needPart=needParts[needPartSeq];
-							this._startTransmit(data.fileId,file,data.senquence,needPart.startIndex,needPart.length);
-						}
-						
-						//md5 Code
-						if(data.needMd5){
-							var md5Value=MD5Check(file,function(md5Value){
-								$.ajax(_uploadUrl,{
-									cache:false,
-									headers:{type:"md5Code",fileId:fileId,MD5:md5Value},
-								});
+				if(!data.code){
+					this.upload._onLoaded(data.fileId,file);
+					this.upload._onSending(data.fileId,data.received);
+					var needParts=data.needParts;
+					for ( var needPartSeq in needParts) {
+						var needPart=needParts[needPartSeq];
+						this.upload._startTransmit(data.id,file,needPart.partSeq,needPart.startIndex,needPart.length);
+					}
+					
+					//md5 Code
+					if(data.needMd5){
+						var md5Value=MD5Check(file,function(md5Value){
+							$.ajax(_uploadUrl,{
+								cache:false,
+								headers:{type:"md5Code",fileId:fileId,MD5:md5Value},
 							});
-							
-						}
+						});
+						
 					}
 				}
+			},
+			error:function(e){
+				var testsdf=eval(e.responseText);
 			}
 		});
-		
-		
-		return fileId;
-	
 	};
 	
 	this._startTransmit=function(id,file,sequence,startIndex,fileLength){
-		if(!data.code){
+		if(sequence==-1){
+			this._onFinished(id);
+		}
 			var reader=new FileReader();
-			reader.readAsArrayBuffer(this._file.slice(startIndex,startIndex+fileLength));
+			reader.readAsArrayBuffer(file.slice(startIndex,startIndex+fileLength));
+			reader.upload=this;
 			reader.onload=function(){
 				var result=reader.result;
-			}
-		}
-		$.ajax(_uploadUrl,{
-			cache:false,
-			headers:{type:"Transmit",bucketName:this._bucketName,id:id,sequence:sequence},
-			type:"POST",
-			processData:false,
-			data:result,
-			success:function(data){
-				if(!data.code){
-				this._onProcess(data.fileId,data.received);
-				if(!data.needParts.length){
-					var needPart=data.needParts[0];
-					this._startTransmit(data.fileId,file,data.senquence,needPart.startIndex,needPart.length);
+			$.ajax(_uploadUrl+"?id="+id,{
+				cache:false,
+				headers:{type:"Transmit",bucketName:this._bucketName,sequence:sequence},
+				type:"POST",
+				contentType:"multipart/form-data",
+				processData:false,
+				data:result,
+				upload:this,
+				success:function(data){
+					if(!data.code){
+						this.upload.upload._onSending(data.fileId,data.received);
+						var needParts=data.needParts;
+						for ( var needPartSeq in needParts) {
+							var needPart=needParts[needPartSeq];
+							this.upload.upload._startTransmit(data.id,file,needPart.partSeq,needPart.startIndex,needPart.length);
+						}
+//					if(!data.code){
+//						this.upload.upload._onSending(data.fileId,data.received);
+//					if(data.needParts.length){
+//						var needPart=data.needParts[0];
+//						this.upload.upload._startTransmit(data.fileId,file,data.senquence,needPart.startIndex,needPart.length);
+//						}
+					}else{
+						console.log("Fileupload: Transport fail "+data.code+" "+data.value);
 					}
-				}else{
-					console.log("Fileupload: Transport fail "+data.code+" "+data.value);
 				}
+			
+			});
 			}
-		
-	});
 		};
-	
 	
 	this._onLoaded=function(){return true};
 	if(jsonObject.onLoaded)
@@ -106,6 +114,5 @@ function fileUpload(bucketName,jsonObject){
 	this._onCenceled=_upload_void_function;
 	if(jsonObject.onCenceled)
 	this._onCenceled=jsonObject.onCenceled;
-	
 	return this;
 }

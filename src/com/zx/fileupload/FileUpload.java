@@ -7,7 +7,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.zx.fileupload.vo.FilePartConfig;
+import com.zx.fileupload.vo.FilePartObject;
 import com.zx.fileupload.vo.FileUploadObject;
+import com.zx.fileupload.vo.FileUploadListener;
+import com.zx.fileupload.vo.ResourceClass;
+import com.zx.fileupload.vo.TransportStatue;
 
 /**
  * 文件上传工具 支持大文件上传,断点续传 版本 0.60
@@ -16,7 +20,7 @@ import com.zx.fileupload.vo.FileUploadObject;
  *
  */
 public class FileUpload {
-	final Map<String,FileUploadObject> fileUploadObjectMap;
+	final HashMap<String,FileUploadObject> fileUploadObjectMap;
 	private UploaderManageThread uploaderManageThread;
 	public boolean  isRunning; 
 	final ResourceClass fileUploadProp;
@@ -71,12 +75,14 @@ public class FileUpload {
 		if(propId.equals(""))
 			return UploadConstent.UPLOAD_FINISHED;
 		//get fileUploadObject
-		FileUploadObject fileUploadObject=fileUploadObjectMap.get(propId);
-		if(fileUploadObject==null){
-			fileUploadObject=new FileUploadObject(bucketName,fileName,length,bucketProp);
-			fileUploadObjectMap.put(propId, fileUploadObject);
-			generateUploadPart(fileUploadObject);
+		synchronized (fileUploadObjectMap) {
+			FileUploadObject fileUploadObject=fileUploadObjectMap.get(propId);
+			if(fileUploadObject==null){
+				fileUploadObject=new FileUploadObject(bucketName,fileName,length,bucketProp);
+				fileUploadObjectMap.put(propId, fileUploadObject);
+			}
 		}
+		generateUploadPart(fileUploadObjectMap.get(propId));
 		//return needParts
 		return getNeedPartsString(propId, bucketProp.getMaxTransportThreadNum());
 		}
@@ -85,28 +91,35 @@ public class FileUpload {
 	 * @param ObjectId
 	 * @param sequence
 	 * @param in
-	 * @param MD5
 	 * @return
 	 */
 	public String transmitUploadPart(String ObjectId,int sequence,InputStream in){
 		FileUploadObject uploadObject=fileUploadObjectMap.get(ObjectId);
-		if(uploadObject==null)
+		if(uploadObject==null){
+			System.out.println("ObjectId is "+ObjectId);
 			return UploadConstent.ERROR_CLIENT_NOREQUEST;
+			
+		}
 		Map<Integer, FilePartConfig> filePartMap=uploadObject.getParts();
 		FilePartConfig partConfig=filePartMap.get(sequence);
-		if(partConfig==null)
-			return UploadConstent.ERRIR_CLIENT_NOPART;
-		FilePartObject partObject=new FilePartObject(ObjectId, sequence, partConfig.getStartIndex(), partConfig.getLength(), in);
-		if(uploadObject.getObjectProp().onFilePartUpload(partObject)){
-			synchronized (uploadObject) {
-				uploadObject.setReceivedSize(uploadObject.getReceivedSize()+partConfig.getLength());	
+		try{
+		synchronized (partConfig) {
+			if(partConfig==null||partConfig.getTransportStatue()!=TransportStatue.WAITTING)
+				return UploadConstent.ERRIR_CLIENT_NOPART;
+			partConfig.setTransportStatue(TransportStatue.TRANSPORTING);
+			FilePartObject partObject=new FilePartObject(ObjectId, sequence, partConfig.getStartIndex(), partConfig.getLength(), in);
+			if(uploadObject.getObjectProp().onFilePartUpload(partObject)){
+				uploadObject.addReceivedSize(partConfig.getLength());	
+				filePartMap.remove(sequence);
+			}else{
+				filePartMap.get(ObjectId).setTransportStatue(TransportStatue.INLINE);
 			}
-			
-			filePartMap.remove(ObjectId);
-		}else{
-			filePartMap.get(ObjectId).setTransport(false);
 		}
-		
+		} catch (NullPointerException e){
+			
+			System.out.println(sequence+" IS NOT USED");
+			return UploadConstent.ERRIR_CLIENT_NOPART;
+		}
 		return getNeedPartsString(ObjectId, 1);
 	}
 	
@@ -164,7 +177,7 @@ public class FileUpload {
 			int sequence=0;
 			while(true){
 				if ((i+partSize >fileConfig.getFileSize())) {
-					FilePartConfig filePargConfig=new FilePartConfig(i, partSize);
+					FilePartConfig filePargConfig=new FilePartConfig(i, (int) (fileConfig.getFileSize()%partSize));
 					fileConfig.getParts().put(sequence,filePargConfig);
 					break;
 				}
@@ -172,11 +185,7 @@ public class FileUpload {
 				i=i+partSize;
 				sequence++;
 			}
-		}else{
-			//reset part's transport statue
-			for (FilePartConfig part : fileConfig.getParts().values()) {
-				part.setTransport(false);
-			}
+			fileConfig.setSequence(sequence);
 		}
 	}
 
@@ -186,55 +195,76 @@ public class FileUpload {
 			return UploadConstent.WARN_CENCEL;
 		fileObject.setLastUploaded(new Date().getTime());
 		StringBuilder returnString = new StringBuilder(
-				"{code:0,value:'success',id:'" + objectId + "',needMd5:"
+				"{\"code\":0,\"value\":\"success\",\"id\":\"" + objectId + "\",\"needMd5\":"
 						+ fileObject.getObjectProp().needMd5Checking()
-						+ ",received:" + fileObject.getReceivedSize());
+						+ ",\"received\":" + fileObject.getReceivedSize());
 		returnString.append(doGetPartsString(objectId,fileObject, partNum)+'}');	
 		return returnString.toString();
 	}
 
 	private String doGetPartsString(String objectId,
 			FileUploadObject fileConfig, int partNum) {
-		StringBuilder returnString = new StringBuilder(",needParts:[");
+		StringBuilder returnString = new StringBuilder(",\"needParts\":[");
 		synchronized (fileConfig.getParts()) {
-			Collection<Integer> partSeqs = fileConfig.getParts().keySet();
+			@SuppressWarnings("unchecked")
+			Collection<Integer> partSeqs =((HashMap<Integer, FilePartConfig>)fileConfig.getParts().clone()).keySet();
 			if (partSeqs.isEmpty()) {
-				fileConfig.getObjectProp().onFileUploadFinished(objectId,
-						fileConfig);
-			} else {
+				fileConfig.getObjectProp().onFileUploadFinished(objectId,fileConfig);
+				return "{\"sequence\":-1,\"startIndex\":0 ,\"length\":0}";
+				} else {
 				int i = 0;
-				for (int partSeq : partSeqs) {
+				for (Integer partSeq : partSeqs) {
 					FilePartConfig filePartConfig=fileConfig.getParts().get(partSeq);
-					
-					if (filePartConfig.isTransporting()) {
-						continue;
-					} else if (i >= partNum)
+					switch (filePartConfig.getTransportStatue()) {
+						case WAITTING:
+							if(new Date().getTime()-filePartConfig.getTransportTime()>fileConfig.getObjectProp().geTransportPartTimeOut()*1000){
+								if (filePartConfig.getTransportStatue()==TransportStatue.WAITTING){
+									fileConfig.getParts().remove(partSeq);
+									int sequence=fileConfig.getSequence();
+									fileConfig.getParts().put(++sequence, filePartConfig);
+									fileConfig.setSequence(sequence);
+									generateNeedPart(returnString, sequence, filePartConfig);
+									i++;
+								}
+							}break;
+						case INLINE:
+							{
+								generateNeedPart(returnString, partSeq, filePartConfig);
+								i++;
+							}break;
+						default:
 							break;
-						else {
-						returnString.append("{startIndex:"
-								+ filePartConfig.getStartIndex() + ",length:"
-								+ filePartConfig.getLength() + "partSeq:"+partSeq+"},");
-						filePartConfig.setTransport(true);
-						i++;
+						}
+					if (i >= partNum)
+						break;
 					}
+					returnString.deleteCharAt(returnString.length() - 1);
 				}
-				returnString.deleteCharAt(returnString.length() - 1);
-			}
 		}
+		
 		returnString.append(']');
 		return returnString.toString();
+	}
+
+	private void generateNeedPart(StringBuilder returnString, int partSeq,
+			FilePartConfig filePartConfig) {
+		returnString.append("{\"startIndex\":"
+				+ filePartConfig.getStartIndex() + ",\"length\":"
+				+ filePartConfig.getLength() + ",\"partSeq\":"+partSeq+"},");
+		filePartConfig.setTransportTime(new Date().getTime());
+		filePartConfig.setTransportStatue(TransportStatue.WAITTING);
 	}
 	
 	
 	
 	private void onStart() {
-		for (FileUploadProp fileUploadProp2 : fileUploadProp.getProps()) {
+		for (FileUploadListener fileUploadProp2 : fileUploadProp.getProps()) {
 			fileUploadProp2.beforeStarted(this);
 		}
 		
 	}
 	private void onStop(){
-		for (FileUploadProp fileUploadProp2 : fileUploadProp.getProps()) {
+		for (FileUploadListener fileUploadProp2 : fileUploadProp.getProps()) {
 			fileUploadProp2.afterStopped(this);
 		}
 	}

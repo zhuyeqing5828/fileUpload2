@@ -2,6 +2,7 @@ package com.zx.fileupload;
 
 import java.util.Map;
 
+import com.zx.fileupload.vo.FilePartObject;
 import com.zx.fileupload.vo.FileUploadObject;
 
 public abstract class CommonFileUploadProp implements FileUploadBucketProp{

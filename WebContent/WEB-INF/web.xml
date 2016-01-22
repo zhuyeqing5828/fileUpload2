@@ -12,6 +12,7 @@
   <servlet>
     <servlet-name>upload</servlet-name>
     <servlet-class>com.zx.fileupload.web.DoUploadServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
   </servlet>
   <servlet-mapping>
     <servlet-name>upload</servlet-name>

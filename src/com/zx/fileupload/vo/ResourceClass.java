@@ -1,13 +1,16 @@
-package com.zx.fileupload;
+package com.zx.fileupload.vo;
 
 import java.util.List;
 import java.util.Map;
 
+import com.zx.fileupload.FileUploadBucketProp;
+
 public class ResourceClass {
 	private Map<String,FileUploadBucketProp> fileUploadPropMap;
-	private List<FileUploadProp> props;
+	private List<FileUploadListener> props;
 	private int recycleCycle;
 	private int fileUploadRequestTimeOut;
+	
 	public Map<String, FileUploadBucketProp> getFileUploadPropMap() {
 		return fileUploadPropMap;
 	}
@@ -15,10 +18,10 @@ public class ResourceClass {
 			Map<String, FileUploadBucketProp> fileUploadPropMap) {
 		this.fileUploadPropMap = fileUploadPropMap;
 	}
-	public List<FileUploadProp> getProps() {
+	public List<FileUploadListener> getProps() {
 		return props;
 	}
-	public void setProps(List<FileUploadProp> props) {
+	public void setProps(List<FileUploadListener> props) {
 		this.props = props;
 	}
 	public int getRecycleCycle() {
@@ -34,7 +37,7 @@ public class ResourceClass {
 		this.fileUploadRequestTimeOut = fileUploadRequestTimeOut;
 	}
 	public ResourceClass(Map<String, FileUploadBucketProp> fileUploadPropMap,
-			List<FileUploadProp> props, int recycleCycle,
+			List<FileUploadListener> props, int recycleCycle,
 			int fileUploadRequestTimeOut) {
 		super();
 		this.fileUploadPropMap = fileUploadPropMap;

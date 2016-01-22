@@ -1,6 +1,7 @@
 package com.zx.fileupload;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.zx.fileupload.vo.FileUploadObject;
@@ -10,7 +11,7 @@ import com.zx.fileupload.vo.FileUploadObject;
  *
  */
 public class UploaderManageThread extends Thread {
-	final Map<String, FileUploadObject> fileConfigMap;
+	final HashMap<String, FileUploadObject> fileConfigMap;
 	final int cycle;
 	final int timeout;
 	private boolean continueLoop=true; 
@@ -31,7 +32,7 @@ public class UploaderManageThread extends Thread {
 	}
 
 
-	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap) {
+	public UploaderManageThread(HashMap<String,FileUploadObject> fileConfigMap) {
 		this(fileConfigMap,1800,900);
 	}
 	/**
@@ -39,7 +40,7 @@ public class UploaderManageThread extends Thread {
 	 * @param fileConfigMap  文件上传管理map
 	 * @param cycle	循环周期
 	 */
-	public UploaderManageThread(Map<String,FileUploadObject> fileConfigMap, int cycle,int timeout) {
+	public UploaderManageThread(HashMap<String,FileUploadObject> fileConfigMap, int cycle,int timeout) {
 		super();
 		this.fileConfigMap = fileConfigMap;
 		this.cycle = cycle*1000;
@@ -59,6 +60,7 @@ public class UploaderManageThread extends Thread {
 					return;
 			}
 		recycleFileConfig();
+		System.out.println("recycle unfinished file");
 			}
 		}
 	}
@@ -66,11 +68,12 @@ public class UploaderManageThread extends Thread {
 
 	private void recycleFileConfig() {
 		synchronized (fileConfigMap) {
-			for (String fileConfigKey : fileConfigMap.keySet()) {
+			for (String fileConfigKey :((HashMap<String, FileUploadObject>) fileConfigMap.clone()).keySet()) {
 				if (new Date().getTime() > fileConfigMap.get(fileConfigKey)
 						.getLastUploaded() + timeout) {
 					FileUploadObject config = fileConfigMap.get(fileConfigKey);
 					fileConfigMap.remove(fileConfigKey);
+					System.out.println( fileConfigKey+" has been removed");
 				}
 			}
 		}

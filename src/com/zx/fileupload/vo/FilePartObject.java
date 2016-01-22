@@ -1,4 +1,4 @@
-package com.zx.fileupload;
+package com.zx.fileupload.vo;
 
 import java.io.InputStream;
 

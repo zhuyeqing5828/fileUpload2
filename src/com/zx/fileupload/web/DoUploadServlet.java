@@ -21,12 +21,12 @@ import org.w3c.dom.NodeList;
 import com.zx.fileupload.FileUpload;
 import com.zx.fileupload.FileUploadBucketProp;
 import com.zx.fileupload.FileUploadFactory;
-import com.zx.fileupload.FileUploadProp;
-import com.zx.fileupload.ResourceClass;
 import com.zx.fileupload.UploadConstent;
 import com.zx.fileupload.exception.FileUploadRuntimeException;
 import com.zx.fileupload.utils.StringUtil;
 import com.zx.fileupload.utils.XmlPaser;
+import com.zx.fileupload.vo.FileUploadListener;
+import com.zx.fileupload.vo.ResourceClass;
 
 public class DoUploadServlet extends HttpServlet{
 	/**
@@ -81,7 +81,7 @@ public class DoUploadServlet extends HttpServlet{
 	}
 	private void transimtData(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
-		String id=req.getHeader(UploadConstent.FILE_ID);
+		String id=req.getParameter(UploadConstent.FILE_ID);
 		int partSequence=req.getIntHeader(UploadConstent.PART_SEQUENCE);
 		InputStream partInputStream=req.getInputStream();
 		String responseString=fileUpload.transmitUploadPart(id,partSequence,partInputStream);
@@ -89,17 +89,18 @@ public class DoUploadServlet extends HttpServlet{
 	}
 	private void createNewRequest(HttpServletRequest req,
 			HttpServletResponse resp) throws IOException {
-		String fileName=req.getHeader(UploadConstent.FILE_NAME);
+		String fileName=req.getParameter(UploadConstent.FILE_NAME);
 		String bucketName=req.getHeader(UploadConstent.BUCKET_NAME);
 		Long fileLength=Long.parseLong(req.getHeader(UploadConstent.LENGTH));
 		Map<String,String[]> parameterMap=req.getParameterMap();
 		writeStringToResponse(resp,fileUpload.addFileUploadRequest(fileName,bucketName,fileLength,parameterMap));
 	}	private void writeStringToResponse(HttpServletResponse resp, String jsonString)
 			throws IOException {
-		resp.setContentType("text/json;charSet=UTF-8");
+		resp.setContentType("application/json;charSet=UTF-8");
 		Writer writer=resp.getWriter();
 			writer.write(jsonString);
 			writer.flush();
+			writer.close();
 	}
 	@Override
 	public void destroy() {
@@ -111,9 +112,9 @@ public class DoUploadServlet extends HttpServlet{
 		String cfgpath=config.getInitParameter(UploadConstent.GLOBAL_CFGPATH);
 		if(StringUtil.isNullString(cfgpath))
 			cfgpath=UploadConstent.DEFAULT_CFGPATH;
-		if(cfgpath.contains("classpath:"))	
-			cfgpath=cfgpath.replace("classpath:", config.getServletContext().getRealPath("WEB-INF"+File.separatorChar+"classes")+File.separatorChar);
-		ResourceClass resource=new ResourceClass(new HashMap<String, FileUploadBucketProp>(),new ArrayList<FileUploadProp>(),3600,7200);
+		if(cfgpath.contains("classPath:"))	
+			cfgpath=cfgpath.replace("classPath:", config.getServletContext().getRealPath("WEB-INF"+File.separatorChar+"classes")+File.separatorChar);
+		ResourceClass resource=new ResourceClass(new HashMap<String, FileUploadBucketProp>(),new ArrayList<FileUploadListener>(),3600,7200);
 		parseCfgFile(resource,new File(cfgpath));
 		fileUpload=FileUploadFactory.generateFileUpload(resource);
 		fileUpload.start();
@@ -152,7 +153,7 @@ public class DoUploadServlet extends HttpServlet{
 			String listenerName=element.getElementsByTagName(UploadConstent.XML_LISTENER_NAME).item(0).getTextContent();
 			String listenerClass=element.getElementsByTagName(UploadConstent.XML_LISTENER_CLASS).item(0).getTextContent();
 			try {
-				resClass.getProps().add( (FileUploadProp) Class.forName(listenerClass).newInstance());
+				resClass.getProps().add( (FileUploadListener) Class.forName(listenerClass).newInstance());
 			} catch (InstantiationException | IllegalAccessException
 					| ClassNotFoundException e) {
 				throw new FileUploadRuntimeException("load fileUploadListener "+listenerName+" fail",e);
