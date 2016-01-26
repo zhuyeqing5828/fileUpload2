@@ -1,8 +1,8 @@
 var fileId;
 var fileUploadTest=new fileUpload("testBucket",{
-	onLoaded:function(fileId,file){
-		fileId=fileId;
-		console.log(fileId +"loaded "+file.name);
+	onLoaded:function(id,file){
+		fileId=id;
+		console.log(id +"loaded "+file.name);
 	},
 
 	onSending:function(fileId,process){
@@ -15,7 +15,7 @@ var fileUploadTest=new fileUpload("testBucket",{
 	},
 	
 	onCenceled:function(fieId){
-		alert(fieldId+"cencelled");
+		alert(fileId+"cencelled");
 		console.log(fileId +"cenceled ");
 	}
 	
@@ -34,5 +34,6 @@ function uploadAndSubmit(){
 
 }
 function cencel(){
-	fileUploadTest.cencel(fileId);
+	console.log(fileId);
+	fileUploadTest.cencelUploadMission(fileId);
 }

@@ -20,9 +20,9 @@ function fileUpload(bucketName,jsonObject){
 	this._bucketName=bucketName;
 	
 	this.cencelUploadMission=function(fileId){
-		$.ajax(_uploadUrl,{
+		$.ajax(_uploadUrl+"?id="+encodeURIComponent(fileId),{
 			cache:false,
-			headers:{type:"Cencel",fileId:fileId},
+			headers:{type:"Cencel"},
 			success:this._onCenceled
 		}); 
 	};
@@ -36,7 +36,7 @@ function fileUpload(bucketName,jsonObject){
 			upload:this,
 			success:function(data){
 				if(!data.code){
-					this.upload._onLoaded(data.fileId,file);
+					this.upload._onLoaded(data.id,file);
 					this.upload._onSending(data.fileId,data.received);
 					var needParts=data.needParts;
 					for ( var needPartSeq in needParts) {

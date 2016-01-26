@@ -76,7 +76,7 @@ public class DoUploadServlet extends HttpServlet{
 	}
 	private void cencelRequest(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
-		String id=req.getHeader(UploadConstent.FILE_ID);
+		String id=req.getParameter(UploadConstent.FILE_ID);
 		writeStringToResponse(resp, fileUpload.cencelUpload(id));
 	}
 	private void transimtData(HttpServletRequest req, HttpServletResponse resp)
