@@ -28,7 +28,7 @@ function fileUpload(bucketName,jsonObject){
 	};
 	
 	this.addUploadMission=function(file,parameterData){
-		$.ajax(_uploadUrl+"?fileName="+file.name,{
+		$.ajax(_uploadUrl+"?fileName="+encodeURIComponent(file.name),{
 			cache:false,
 			headers:{type:"New",bucketName:this._bucketName,fileLength:file.size},
 			data:parameterData,
@@ -65,13 +65,14 @@ function fileUpload(bucketName,jsonObject){
 	this._startTransmit=function(id,file,sequence,startIndex,fileLength){
 		if(sequence==-1){
 			this._onFinished(id);
+			return;
 		}
 			var reader=new FileReader();
 			reader.readAsArrayBuffer(file.slice(startIndex,startIndex+fileLength));
 			reader.upload=this;
 			reader.onload=function(){
 				var result=reader.result;
-			$.ajax(_uploadUrl+"?id="+id,{
+			$.ajax(_uploadUrl+"?id="+encodeURIComponent(id),{
 				cache:false,
 				headers:{type:"Transmit",bucketName:this._bucketName,sequence:sequence},
 				type:"POST",

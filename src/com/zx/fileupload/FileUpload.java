@@ -103,20 +103,20 @@ public class FileUpload {
 		Map<Integer, FilePartConfig> filePartMap=uploadObject.getParts();
 		FilePartConfig partConfig=filePartMap.get(sequence);
 		try{
-		synchronized (partConfig) {
 			if(partConfig==null||partConfig.getTransportStatue()!=TransportStatue.WAITTING)
 				return UploadConstent.ERRIR_CLIENT_NOPART;
+		synchronized (partConfig) {
 			partConfig.setTransportStatue(TransportStatue.TRANSPORTING);
 			FilePartObject partObject=new FilePartObject(ObjectId, sequence, partConfig.getStartIndex(), partConfig.getLength(), in);
 			if(uploadObject.getObjectProp().onFilePartUpload(partObject)){
 				uploadObject.addReceivedSize(partConfig.getLength());	
 				filePartMap.remove(sequence);
 			}else{
-				filePartMap.get(ObjectId).setTransportStatue(TransportStatue.INLINE);
+				filePartMap.get(sequence).setTransportStatue(TransportStatue.INLINE);
 			}
 		}
 		} catch (NullPointerException e){
-			
+			e.printStackTrace();
 			System.out.println(sequence+" IS NOT USED");
 			return UploadConstent.ERRIR_CLIENT_NOPART;
 		}
@@ -171,7 +171,7 @@ public class FileUpload {
 	 * @param fileConfig
 	 */
 	private void generateUploadPart(FileUploadObject fileConfig) {
-		if (fileConfig.getParts().isEmpty()) {
+		if (fileConfig.getParts().isEmpty()&&fileConfig.getReceivedSize()==0) {
 			int partSize=fileConfig.getObjectProp().getPartSize();
 			long i = 0;
 			int sequence=0;
@@ -210,11 +210,13 @@ public class FileUpload {
 			Collection<Integer> partSeqs =((HashMap<Integer, FilePartConfig>)fileConfig.getParts().clone()).keySet();
 			if (partSeqs.isEmpty()) {
 				fileConfig.getObjectProp().onFileUploadFinished(objectId,fileConfig);
-				return "{\"sequence\":-1,\"startIndex\":0 ,\"length\":0}";
+				returnString.append("{\"partSeq\":-1,\"startIndex\":0 ,\"length\":0}");
 				} else {
 				int i = 0;
 				for (Integer partSeq : partSeqs) {
 					FilePartConfig filePartConfig=fileConfig.getParts().get(partSeq);
+					if(filePartConfig==null)
+						continue;
 					switch (filePartConfig.getTransportStatue()) {
 						case WAITTING:
 							if(new Date().getTime()-filePartConfig.getTransportTime()>fileConfig.getObjectProp().geTransportPartTimeOut()*1000){

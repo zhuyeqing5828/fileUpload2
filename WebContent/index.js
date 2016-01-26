@@ -10,7 +10,7 @@ var fileUploadTest=new fileUpload("testBucket",{
 	},
 	
 	onFinished:function(fileId){
-		alert(fieldId+"finished");
+		alert(fileId+"finished");
 		console.log(fileId +"finished ");
 	},
 	
@@ -31,4 +31,8 @@ function uploadAndSubmit(){
 		document.getElementById("bytesTotal").innerHTML=file3.size;
 		fileUploadTest.addUploadMission(file3);
 	}
+
+}
+function cencel(){
+	fileUploadTest.cencel(fileId);
 }

@@ -22,7 +22,7 @@ public class TestBucket implements FileUploadBucketProp{
 	@Override
 	public boolean onFilePartUpload(FilePartObject filePartObject) {
 		String fileName=filePartObject.getFileId();
-		System.out.println("upload "+ fileName +" partseq "+filePartObject.getSequence());
+	//	System.out.println("upload "+ fileName +" partseq "+filePartObject.getSequence());
 		File file=new File(path+fileName);
 		try(RandomAccessFile randomaccess=new RandomAccessFile(file, "rw");) {
 			randomaccess.seek(filePartObject.getStartIndex());
