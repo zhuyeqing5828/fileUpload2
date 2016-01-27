@@ -70,7 +70,7 @@ public class DoUploadServlet extends HttpServlet{
 	}
 	private void getMD5Check(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
-		String id=req.getHeader(UploadConstent.FILE_ID);
+		String id=req.getParameter(UploadConstent.FILE_ID);
 		String Md5=req.getHeader(UploadConstent.MD5);
 		writeStringToResponse(resp, fileUpload.setMD5(id,Md5));
 	}

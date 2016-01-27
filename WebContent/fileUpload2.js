@@ -26,7 +26,13 @@ function fileUpload(bucketName,jsonObject){
 			success:this._onCenceled
 		}); 
 	};
-	
+	function cenceled(data){
+		if(!data.code){
+			this._onCenceled(data.fileId);
+		}else{
+			console.log(data);
+		}
+	}
 	this.addUploadMission=function(file,parameterData){
 		$.ajax(_uploadUrl+"?fileName="+encodeURIComponent(file.name),{
 			cache:false,
@@ -47,9 +53,15 @@ function fileUpload(bucketName,jsonObject){
 					//md5 Code
 					if(data.needMd5){
 						var md5Value=MD5Check(file,function(md5Value){
-							$.ajax(_uploadUrl,{
+							$.ajax(_uploadUrl+"?id="+encodeURIComponent(data.id),{
 								cache:false,
-								headers:{type:"md5Code",fileId:fileId,MD5:md5Value},
+								headers:{type:"SetMD5",md5Code:md5Value},
+								success:function(data){
+									console.log(data.code+"  MD5 success");
+								},
+								error:function(data){
+									console.log(data);
+								}
 							});
 						});
 						
@@ -88,12 +100,7 @@ function fileUpload(bucketName,jsonObject){
 							var needPart=needParts[needPartSeq];
 							this.upload.upload._startTransmit(data.id,file,needPart.partSeq,needPart.startIndex,needPart.length);
 						}
-//					if(!data.code){
-//						this.upload.upload._onSending(data.fileId,data.received);
-//					if(data.needParts.length){
-//						var needPart=data.needParts[0];
-//						this.upload.upload._startTransmit(data.fileId,file,data.senquence,needPart.startIndex,needPart.length);
-//						}
+//					
 					}else{
 						console.log("Fileupload: Transport fail "+data.code+" "+data.value);
 					}

@@ -14,7 +14,7 @@ public class TestBucket implements FileUploadBucketProp{
 	String path="D:\\tmp\\";
 	@Override
 	public boolean needMd5Checking() {
-		return false;
+		return true;
 	}
 	/**
 	 * example. 当收到一个文件上传分片时操作
@@ -56,7 +56,7 @@ public class TestBucket implements FileUploadBucketProp{
 	@Override
 	public int getPartSize() {
 		
-		return 2<<20;
+		return 1<<20;
 	}
 	@Override
 	public int getMaxTransportThreadNum() {
